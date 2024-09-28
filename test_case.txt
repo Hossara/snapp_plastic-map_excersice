@@ -1,0 +1,6 @@
+start 12 3
+mmd -22 6
+mmd 12 3
+mmd -22 6
+mmd 12 3
+mmd -22 6
