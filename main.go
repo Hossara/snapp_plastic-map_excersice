@@ -1,73 +1,131 @@
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+)
 
-// Location types
 type coordination struct {
 	x int
 	y int
 }
 
-type locations map[string]coordination
+type location struct {
+	name  string
+	from  string
+	index int
+	cord  coordination
+}
 
-var startLocation coordination
+func parseCoordinate(coordination string) int {
+
+	if len(coordination) < 2 {
+		return 0
+	}
+
+	valueStr := coordination[2:]
+
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return 0
+	}
+	return value
+}
 
 func main() {
-	locationList := make(locations)
+	var (
+		locations         []location
+		loc               location
+		lines             []string
+		i                 int
+		startCoordination coordination
+	)
 
-	// Main loop
-	for {
-		// Define variables
-		var (
-			name string
-			x    int
-			y    int
-		)
+	scanner := bufio.NewScanner(os.Stdin)
 
-		// Read line by line
-		args, err := fmt.Scanf("%s %d %d", &name, &x, &y)
+	for scanner.Scan() {
 
-		// End of line
-		if args < 3 {
-			break
-		}
+		lines = strings.Fields(scanner.Text())
 
-		// Handle wrong format
-		if err != nil {
-			panic("name x y format is not correct")
-		}
+		if i == 0 {
+			x := parseCoordinate(lines[1])
+			y := parseCoordinate(lines[2])
 
-		// Handle list limitations
-		if len(locationList) == 1000 {
-			panic("you reach maximum number of coordinations")
-		}
+			if x <= -1000000 || x >= 1000000 || y <= -1000000 || y >= 1000000 {
+				panic("x and y number must be between -1000000 and 1000000")
+			}
 
-		// Handle x, y limitations
-		if x <= -1000000 || x >= 1000000 || y <= -1000000 || y >= 1000000 {
-			panic("x and y number must be between -1000000 and 1000000")
-		}
-
-		// Handle first element rule
-		if (coordination{}) == startLocation {
-			// Set start coordination
-			startLocation = coordination{
+			startCoordination = coordination{
 				x: x,
 				y: y,
 			}
+		} else {
 
-			if name != "start" {
-				panic("first element should be start")
+			x := parseCoordinate(lines[3])
+			y := parseCoordinate(lines[4])
+
+			if x <= -1000000 || x >= 1000000 || y <= -1000000 || y >= 1000000 {
+				//panic("x and y number must be between -1000000 and 1000000")
+				return
 			}
 
-			continue
+			loc = location{
+				name: lines[0],
+				from: lines[2],
+				cord: coordination{
+					x: x,
+					y: y,
+				},
+				index: i,
+			}
+			locations = append(locations, loc)
 		}
 
-		println("Im not here", name)
+		i++
+	}
 
-		// Push to map
-		locationList[name] = coordination{
-			x: x,
-			y: y,
+	// Handle list limitations
+	if len(locations) == 1000 {
+		return
+		//panic("you reach maximum number of coordinations")
+	}
+
+	sort.Slice(locations, func(a, b int) bool {
+		if locations[a].from == "start" && locations[b].from != "start" {
+			return true
+		} else {
+			return false
 		}
+	})
+
+	for i := range locations {
+		if locations[i].from == "start" {
+			locations[i].cord.x += startCoordination.x
+			locations[i].cord.y += startCoordination.y
+		} else {
+			for j := 0; j < i; j++ {
+				if locations[j].name == locations[i].from {
+					locations[i].cord.x = locations[j].cord.x + locations[i].cord.x
+					locations[i].cord.y = locations[j].cord.y + locations[i].cord.y
+					break
+				}
+			}
+		}
+	}
+
+	sort.Slice(locations, func(a, b int) bool {
+		return locations[a].index < locations[b].index
+	})
+
+	for _, p := range locations {
+		fmt.Printf("%s x=%d y=%d\n", p.name, p.cord.x, p.cord.y)
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println(err)
 	}
 }
